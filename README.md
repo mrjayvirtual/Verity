@@ -1,2 +1,2 @@
 # Verity
-Client-side heuristic scanner that flags unverifiable AI-generated claims and scores output trustworthiness.
+A client-side tool that scans AI-generated text for risky writing patterns (absolute claims, missing sources, overconfident phrasing) and scores how careful the phrasing sounds. Checks style, not facts.

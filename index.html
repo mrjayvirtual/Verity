@@ -34,6 +34,24 @@
       radial-gradient(ellipse 800px 460px at 92% 8%, rgba(139,92,246,0.07), transparent 60%),
       radial-gradient(ellipse 600px 400px at 5% 70%, rgba(79,209,165,0.04), transparent 65%),
       var(--bg);
+    background-size: 200% 200%, 200% 200%, 200% 200%, auto;
+    animation: drift 22s ease-in-out infinite;
+  }
+
+  @keyframes drift{
+    0%{ background-position: 50% 0%, 100% 0%, 0% 100%; }
+    50%{ background-position: 45% 8%, 88% 14%, 10% 88%; }
+    100%{ background-position: 50% 0%, 100% 0%, 0% 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    body{ animation: none; }
+    .brand-icon{ animation: none; }
+    .brand-icon .ring{ animation: none; }
+    .results.visible{ animation: none; }
+    .sweep-line{ animation: none; }
+    .signature::before{ animation: none; background-position: 0 0; }
+    .flag.beam-in::after{ animation: none; }
   }
 
   .mono{ font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; }
@@ -52,11 +70,19 @@
 
   .brand{ display: flex; align-items: center; gap: 14px; }
 
-  .brand-icon{ width: 38px; height: 38px; flex-shrink: 0; }
+  .brand-icon{
+    width: 38px; height: 38px; flex-shrink: 0;
+    animation: breathe 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(91,140,255,0.35));
+  }
   .brand-icon svg{ width: 100%; height: 100%; display: block; }
   .brand-icon .ring{ animation: spin 6s linear infinite; transform-origin: 50% 50%; }
 
   @keyframes spin{ from{ transform: rotate(0deg); } to{ transform: rotate(360deg); } }
+  @keyframes breathe{
+    0%, 100%{ transform: scale(1); filter: drop-shadow(0 0 5px rgba(91,140,255,0.3)); }
+    50%{ transform: scale(1.08); filter: drop-shadow(0 0 14px rgba(139,92,246,0.55)); }
+  }
 
   h1{
     font-size: 32px; font-weight: 700; letter-spacing: -0.03em;
@@ -124,6 +150,31 @@
   .chip:hover{ border-color: var(--accent); color: var(--text); background: var(--panel-2); }
   .chip:active{ transform: scale(0.97); }
 
+  .scan-frame{ position: relative; }
+
+  .sweep-line{
+    position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #5B8CFF, #8B5CF6, transparent);
+    opacity: 0; pointer-events: none; border-radius: 2px;
+  }
+
+  .scan-frame.scanning .sweep-line{
+    opacity: 1;
+    animation: sweep 1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .scan-frame.scanning textarea{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(91,140,255,0.2), 0 0 24px -4px rgba(91,140,255,0.3);
+  }
+
+  @keyframes sweep{
+    0%{ top: 0; opacity: 0; }
+    8%{ opacity: 1; }
+    92%{ opacity: 1; }
+    100%{ top: calc(100% - 2px); opacity: 0; }
+  }
+
   textarea{
     width: 100%; min-height: 160px;
     background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
@@ -183,6 +234,15 @@
   .copy-btn:hover{ border-color: var(--accent); background: rgba(91,140,255,0.08); opacity: 1; }
   .copy-btn.copied{ color: var(--signal-low); border-color: var(--signal-low); }
 
+  .mini-copy{
+    margin-top: 10px; background: transparent; color: var(--dim);
+    border: 1px solid var(--line-soft); border-radius: 100px; padding: 4px 11px;
+    font-size: 10.5px; font-weight: 500; box-shadow: none; cursor: pointer;
+    transition: all 0.15s ease; letter-spacing: 0.01em;
+  }
+  .mini-copy:hover{ border-color: var(--accent); color: var(--text); }
+  .mini-copy.copied{ color: var(--signal-low); border-color: var(--signal-low); }
+
   .section-title{
     font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim);
@@ -191,11 +251,48 @@
   .section-title::after{ content: ''; flex: 1; height: 1px; background: var(--line); }
 
   .flag{
+    position: relative; overflow: hidden;
     background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--signal-mid);
     border-radius: 6px; padding: 16px 18px; margin-bottom: 10px;
   }
   .flag.high{ border-left-color: var(--signal-high); }
   .flag.low{ border-left-color: var(--signal-low); }
+
+  .flag::after{
+    content: '';
+    position: absolute; inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .flag.high.beam-in::after{ background: rgba(232,85,61,0.35); animation: beamFlash 1.1s ease-out; }
+  .flag.mid.beam-in::after{ background: rgba(232,184,75,0.30); animation: beamFlash 1.1s ease-out; }
+  .flag.low.beam-in::after{ background: rgba(79,209,165,0.28); animation: beamFlash 1.1s ease-out; }
+
+  .flag.high.beam-in{ animation: borderGlowHigh 1.1s ease-out; }
+  .flag.mid.beam-in{ animation: borderGlowMid 1.1s ease-out; }
+  .flag.low.beam-in{ animation: borderGlowLow 1.1s ease-out; }
+
+  @keyframes borderGlowHigh{
+    0%{ box-shadow: none; }
+    25%{ box-shadow: 0 0 0 1px rgba(232,85,61,0.5), 0 0 22px -2px rgba(232,85,61,0.7); }
+    100%{ box-shadow: none; }
+  }
+  @keyframes borderGlowMid{
+    0%{ box-shadow: none; }
+    25%{ box-shadow: 0 0 0 1px rgba(232,184,75,0.45), 0 0 20px -2px rgba(232,184,75,0.6); }
+    100%{ box-shadow: none; }
+  }
+  @keyframes borderGlowLow{
+    0%{ box-shadow: none; }
+    25%{ box-shadow: 0 0 0 1px rgba(79,209,165,0.4), 0 0 18px -2px rgba(79,209,165,0.55); }
+    100%{ box-shadow: none; }
+  }
+
+  @keyframes beamFlash{
+    0%{ opacity: 0; }
+    20%{ opacity: 1; }
+    100%{ opacity: 0; }
+  }
 
   .flag-head{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
   .flag-type{ font-weight: 600; font-size: 14px; }
@@ -227,8 +324,17 @@
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap; position: relative;
   }
   .signature::before{
-    content: ''; position: absolute; top: -1px; left: 0; width: 64px; height: 1px;
-    background: linear-gradient(90deg, #36C9F0, #B341E8);
+    content: ''; position: absolute; top: -1px; left: 0; width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent, #36C9F0, #B341E8, transparent);
+    background-size: 90px 1px;
+    background-repeat: no-repeat;
+    background-position: -90px 0;
+    animation: slideAcross 5s ease-in-out infinite;
+  }
+  @keyframes slideAcross{
+    0%{ background-position: -90px 0; }
+    50%{ background-position: calc(100% + 90px) 0; }
+    100%{ background-position: -90px 0; }
   }
   .sig-name{
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -252,7 +358,6 @@
     .sig-slogan{ margin-left: 0; }
   }
 
-  @media (prefers-reduced-motion: reduce){ .results.visible{ animation: none; } }
 </style>
 </head>
 <body>
@@ -325,7 +430,10 @@
     <button class="chip" data-sample="clean">Careful AI answer</button>
   </div>
 
-  <textarea id="input" placeholder="Paste AI-generated text here — an answer, a summary, a claim, a generated paragraph. Verity scans the writing style for risk patterns, not the facts themselves."></textarea>
+  <div class="scan-frame">
+    <textarea id="input" placeholder="Paste AI-generated text here — an answer, a summary, a claim, a generated paragraph. Verity scans the writing style for risk patterns, not the facts themselves."></textarea>
+    <div class="sweep-line"></div>
+  </div>
 
   <div class="controls">
     <div class="char-count mono"><span id="charCount">0</span> characters</div>
@@ -499,43 +607,123 @@ function render(text) {
   scoreLabel.style.color = color;
   scoreSub.textContent = sub;
 
-  window._verityLastResult = { score, label, high, mid, sentences: sentences.length };
+  window._verityLastResult = { score, label, high, mid, sentences: sentences.length, flags };
 
   flagsContainer.innerHTML = '';
   if (flags.length === 0) {
-    flagsContainer.innerHTML = '<div class="empty-flags">✓ No risky phrasing patterns found. Remember: this checks tone and style, not facts.</div>';
+    flagsContainer.innerHTML = `
+      <div class="empty-flags">
+        ✓ No risky phrasing patterns found. Remember: this checks tone and style, not facts.
+        <button class="mini-copy" data-copy-clean="1">Copy this result</button>
+      </div>`;
+    const cleanBtn = flagsContainer.querySelector('[data-copy-clean]');
+    cleanBtn.addEventListener('click', (e) => {
+      const text = `VERITY: No risky phrasing patterns found in this text (style check only, not a fact-check). — mrjayvirtual.github.io/Verity`;
+      copyToClipboard(text, e.target, 'Copied ✓');
+    });
   } else {
-    flags.forEach(f => {
+    flags.forEach((f, i) => {
       const el = document.createElement('div');
       el.className = 'flag ' + f.severity;
       el.innerHTML = `
         <div class="flag-head"><span class="flag-type">${f.type}</span><span class="flag-severity">${f.severity}</span></div>
         <div class="flag-quote mono">${f.snippet.replace(/</g, '&lt;')}</div>
         <div class="flag-why">${f.why}</div>
+        <button class="mini-copy" data-flag-index="${i}">Copy this flag</button>
       `;
       flagsContainer.appendChild(el);
+
+      const miniBtn = el.querySelector('.mini-copy');
+      miniBtn.addEventListener('click', (e) => {
+        const text = `VERITY FLAG [${f.severity.toUpperCase()}]: ${f.type}\n"${f.snippet}"\n→ ${f.why}\n— mrjayvirtual.github.io/Verity`;
+        copyToClipboard(text, e.target, 'Copied ✓');
+      });
+
+      setTimeout(() => { el.classList.add('beam-in'); }, 120 + i * 180);
     });
   }
 
   results.classList.add('visible');
 }
 
+function copyToClipboard(text, btnEl, successText) {
+  function showSuccess() {
+    const original = btnEl.dataset.originalText || btnEl.textContent;
+    btnEl.dataset.originalText = original;
+    btnEl.textContent = successText || 'Copied ✓';
+    btnEl.classList.add('copied');
+    setTimeout(() => { btnEl.textContent = original; btnEl.classList.remove('copied'); }, 1800);
+  }
+  function showFailure() {
+    const original = btnEl.dataset.originalText || btnEl.textContent;
+    btnEl.dataset.originalText = original;
+    btnEl.textContent = 'Copy failed — long-press to copy';
+    setTimeout(() => { btnEl.textContent = original; }, 2200);
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(showSuccess).catch(() => fallbackCopy(text, showSuccess, showFailure));
+  } else {
+    fallbackCopy(text, showSuccess, showFailure);
+  }
+}
+
+function fallbackCopy(text, onSuccess, onFailure) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    ta.style.top = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    ok ? onSuccess() : onFailure();
+  } catch (err) {
+    onFailure();
+  }
+}
+
 document.getElementById('copyBtn').addEventListener('click', (e) => {
   const r = window._verityLastResult;
   if (!r) return;
-  const summary = `Verity scan result: ${r.score}/100 (${r.label}) — ${r.high} high-risk flag(s), ${r.mid} caution flag(s) across ${r.sentences} sentence(s). Style-pattern check only, not a fact verification. mrjayvirtual.github.io/Verity`;
-  navigator.clipboard.writeText(summary).then(() => {
-    e.target.textContent = 'Copied ✓';
-    e.target.classList.add('copied');
-    setTimeout(() => { e.target.textContent = 'Copy result summary'; e.target.classList.remove('copied'); }, 2000);
-  });
+
+  let summary = `VERITY SCAN RESULT\n`;
+  summary += `Score: ${r.score}/100 — ${r.label}\n`;
+  summary += `Flags: ${r.high} high-risk, ${r.mid} caution, across ${r.sentences} sentence(s)\n`;
+
+  if (r.flags && r.flags.length > 0) {
+    summary += `\nFindings:\n`;
+    r.flags.forEach((f, i) => {
+      summary += `${i + 1}. [${f.severity.toUpperCase()}] ${f.type} — ${f.why}\n`;
+    });
+  } else {
+    summary += `\nNo risky phrasing patterns found.\n`;
+  }
+
+  summary += `\nNote: style-pattern check only, not a fact verification.\n`;
+  summary += `Scanned with Verity — mrjayvirtual.github.io/Verity`;
+
+  copyToClipboard(summary, e.target, 'Copied ✓');
 });
 
 scanBtn.addEventListener('click', () => {
   const text = input.value.trim();
   if (text.length < 20) return;
-  render(text);
-  results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  scanBtn.disabled = true;
+  scanBtn.textContent = 'Scanning…';
+  document.querySelector('.scan-frame').classList.add('scanning');
+
+  setTimeout(() => {
+    render(text);
+    document.querySelector('.scan-frame').classList.remove('scanning');
+    scanBtn.disabled = false;
+    scanBtn.textContent = 'Run Scan';
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 1000);
 });
 
 input.addEventListener('keydown', (e) => {

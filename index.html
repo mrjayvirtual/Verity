@@ -17,6 +17,7 @@
     --signal-low: #4FD1A5;
     --signal-mid: #E8B84B;
     --signal-high: #E8553D;
+    --sev-risky: #F2994A;
     --accent: #5B8CFF;
     --accent-2: #8B5CF6;
   }
@@ -52,9 +53,15 @@
     .sweep-line{ animation: none; }
     .signature::before{ animation: none; background-position: 0 0; }
     .flag.beam-in::after{ animation: none; }
+    .modal-box{ animation: none; }
   }
 
   .mono{ font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; }
+
+  .sr-only{
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
 
   .grain{
     position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.4;
@@ -150,6 +157,39 @@
   .chip:hover{ border-color: var(--accent); color: var(--text); background: var(--panel-2); }
   .chip:active{ transform: scale(0.97); }
 
+  .prompt-field{ margin-bottom: 14px; }
+  .prompt-label{
+    display: block; font-size: 12px; color: var(--dim); margin-bottom: 6px;
+  }
+  .prompt-label .optional-tag{
+    font-size: 10.5px; color: var(--dim-2); font-style: italic; margin-left: 6px;
+  }
+  .prompt-textarea{
+    width: 100%; min-height: 56px;
+    background: var(--panel); border: 1px dashed var(--line); border-radius: 6px;
+    color: var(--dim); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 13px; line-height: 1.5; padding: 10px 12px; resize: vertical;
+    transition: border-color 0.15s ease;
+  }
+  .prompt-textarea:focus{ outline: none; border-color: var(--accent); color: var(--text); }
+  .prompt-textarea::placeholder{ color: var(--dim-2); }
+
+  .prompt-ref{
+    font-size: 12px; color: var(--dim); background: var(--panel); border: 1px dashed var(--line);
+    border-radius: 6px; padding: 10px 14px; margin-bottom: 18px; line-height: 1.5;
+  }
+  .prompt-ref strong{ color: var(--dim); font-weight: 600; }
+
+  .restore-bar{
+    display: none; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 14px; font-size: 12.5px; color: var(--dim);
+  }
+  .restore-bar.visible{ display: flex; }
+  .restore-bar button{ padding: 6px 14px; font-size: 11.5px; box-shadow: none; }
+  .restore-bar .restore-dismiss{ background: transparent; color: var(--dim); border: 1px solid var(--line-soft); }
+  .restore-bar .restore-dismiss:hover{ color: var(--text); }
+
   .scan-frame{ position: relative; }
 
   .sweep-line{
@@ -234,21 +274,82 @@
   .copy-btn:hover{ border-color: var(--accent); background: rgba(91,140,255,0.08); opacity: 1; }
   .copy-btn.copied{ color: var(--signal-low); border-color: var(--signal-low); }
 
-  .mini-copy{
+  .mini-copy, .mini-learn{
     margin-top: 10px; background: transparent; color: var(--dim);
     border: 1px solid var(--line-soft); border-radius: 100px; padding: 4px 11px;
     font-size: 10.5px; font-weight: 500; box-shadow: none; cursor: pointer;
     transition: all 0.15s ease; letter-spacing: 0.01em;
   }
-  .mini-copy:hover{ border-color: var(--accent); color: var(--text); }
+  .mini-copy:hover, .mini-learn:hover{ border-color: var(--accent); color: var(--text); }
   .mini-copy.copied{ color: var(--signal-low); border-color: var(--signal-low); }
 
+  /* Highlighted source text panel */
+  .highlight-bar{
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+    margin-bottom: 24px; font-size: 12.5px; color: var(--dim); transition: border-color 0.15s ease;
+  }
+  .highlight-bar:hover{ border-color: var(--accent); }
+  .highlight-bar .dot{ width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); flex-shrink: 0; }
+  .highlight-bar .chev{ margin-left: auto; transition: transform 0.2s ease; color: var(--dim-2); }
+  .highlight-bar.open .chev{ transform: rotate(180deg); }
+  .highlight-box{
+    background: #07090C; border: 1px solid var(--line); border-radius: 6px;
+    max-height: 0; overflow: hidden; opacity: 0; margin-bottom: 0;
+    transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease, margin 0.3s ease;
+  }
+  .highlight-box.open{ max-height: 900px; overflow-y: auto; opacity: 1; padding: 18px 20px; margin-bottom: 24px; }
+  .highlight-text{
+    font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 13px; line-height: 1.8; color: #C3C8CF; white-space: pre-wrap; word-break: break-word;
+  }
+  .highlight-text mark{ padding: 1px 3px; border-radius: 3px; }
+  .highlight-text mark.hl-high{ background: rgba(232,85,61,0.32); color: #fff; }
+  .highlight-text mark.hl-mid{ background: rgba(242,153,74,0.32); color: #fff; }
+  .highlight-text mark.hl-low{ background: rgba(232,184,75,0.30); color: #141414; }
+  .highlight-legend{ display: flex; gap: 16px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); flex-wrap: wrap; }
+  .highlight-legend span{ font-size: 11px; color: var(--dim); display: flex; align-items: center; gap: 6px; }
+  .highlight-legend i{ width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  .scan-meta{
+    display: flex; gap: 20px; flex-wrap: wrap;
+    font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 11px; color: var(--dim); margin-bottom: 20px;
+    padding: 12px 16px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+  }
+  .scan-meta strong{ color: var(--text); font-weight: 600; }
+
+  /* Overall summary card */
+  .overall-card{
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 18px 20px; margin-bottom: 28px;
+  }
+  .overall-card .overall-label{ font-size: 14px; font-weight: 700; margin-bottom: 6px; }
+  .overall-card .overall-text{ font-size: 13.5px; color: #C3C8CF; line-height: 1.55; }
+
+  .section-title-row{ display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
   .section-title{
     font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim);
     margin-bottom: 14px; display: flex; align-items: center; gap: 10px;
   }
+  .section-title-row .section-title{ margin-bottom: 0; flex: 1; }
   .section-title::after{ content: ''; flex: 1; height: 1px; background: var(--line); }
+
+  .expand-all-btn{
+    background: transparent; color: var(--dim); border: 1px solid var(--line-soft);
+    border-radius: 100px; padding: 5px 13px; font-size: 11px; font-weight: 500;
+    box-shadow: none; white-space: nowrap;
+  }
+  .expand-all-btn:hover{ color: var(--text); border-color: var(--accent); opacity: 1; }
+
+  .quick-nav{ margin-bottom: 16px; }
+  .quick-nav a, .quick-nav button{
+    display: inline-block; background: rgba(232,85,61,0.1); color: var(--signal-high);
+    border: 1px solid rgba(232,85,61,0.35); border-radius: 100px; padding: 7px 14px;
+    font-size: 11.5px; font-weight: 600; box-shadow: none; cursor: pointer;
+  }
+  .quick-nav button:hover{ opacity: 1; background: rgba(232,85,61,0.18); }
 
   .flag{
     position: relative; overflow: hidden;
@@ -256,7 +357,8 @@
     border-radius: 6px; padding: 16px 18px; margin-bottom: 10px;
   }
   .flag.high{ border-left-color: var(--signal-high); }
-  .flag.low{ border-left-color: var(--signal-low); }
+  .flag.mid{ border-left-color: var(--sev-risky); }
+  .flag.low{ border-left-color: var(--signal-mid); }
 
   .flag::after{
     content: '';
@@ -265,8 +367,8 @@
     pointer-events: none;
   }
   .flag.high.beam-in::after{ background: rgba(232,85,61,0.35); animation: beamFlash 1.1s ease-out; }
-  .flag.mid.beam-in::after{ background: rgba(232,184,75,0.30); animation: beamFlash 1.1s ease-out; }
-  .flag.low.beam-in::after{ background: rgba(79,209,165,0.28); animation: beamFlash 1.1s ease-out; }
+  .flag.mid.beam-in::after{ background: rgba(242,153,74,0.30); animation: beamFlash 1.1s ease-out; }
+  .flag.low.beam-in::after{ background: rgba(232,184,75,0.28); animation: beamFlash 1.1s ease-out; }
 
   .flag.high.beam-in{ animation: borderGlowHigh 1.1s ease-out; }
   .flag.mid.beam-in{ animation: borderGlowMid 1.1s ease-out; }
@@ -279,12 +381,12 @@
   }
   @keyframes borderGlowMid{
     0%{ box-shadow: none; }
-    25%{ box-shadow: 0 0 0 1px rgba(232,184,75,0.45), 0 0 20px -2px rgba(232,184,75,0.6); }
+    25%{ box-shadow: 0 0 0 1px rgba(242,153,74,0.45), 0 0 20px -2px rgba(242,153,74,0.6); }
     100%{ box-shadow: none; }
   }
   @keyframes borderGlowLow{
     0%{ box-shadow: none; }
-    25%{ box-shadow: 0 0 0 1px rgba(79,209,165,0.4), 0 0 18px -2px rgba(79,209,165,0.55); }
+    25%{ box-shadow: 0 0 0 1px rgba(232,184,75,0.4), 0 0 18px -2px rgba(232,184,75,0.55); }
     100%{ box-shadow: none; }
   }
 
@@ -294,24 +396,67 @@
     100%{ opacity: 0; }
   }
 
-  .flag-head{ display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .flag-type{ font-weight: 600; font-size: 14px; }
-  .flag-severity{ font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); }
+  .flag-head{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 10px; }
+  .flag-head-left{ display: flex; align-items: center; min-width: 0; }
+  .flag-type{ font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .occurrence-badge{ font-size: 10px; color: var(--dim-2); font-weight: 500; margin-left: 6px; white-space: nowrap; }
+  .category-tag{
+    display: inline-block; font-size: 10px; color: var(--dim); background: var(--panel-2);
+    border: 1px solid var(--line-soft); border-radius: 100px; padding: 2px 9px; margin-top: 6px;
+  }
+
+  .sev-dot{ width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 8px; flex-shrink: 0; }
+  .sev-dot.high{ background: var(--signal-high); }
+  .sev-dot.mid{ background: var(--sev-risky); }
+  .sev-dot.low{ background: var(--signal-mid); }
+
+  .flag-severity-badge{
+    font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 4px 9px; border-radius: 100px; font-weight: 700; flex-shrink: 0;
+  }
+  .flag-severity-badge.high{ color: var(--signal-high); background: rgba(232,85,61,0.14); }
+  .flag-severity-badge.mid{ color: var(--sev-risky); background: rgba(242,153,74,0.14); }
+  .flag-severity-badge.low{ color: var(--signal-mid); background: rgba(232,184,75,0.14); }
 
   .flag-quote{
     font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; font-size: 12.5px; color: var(--dim);
     background: #07090C; border-radius: 4px; padding: 8px 10px; margin: 8px 0; border: 1px solid var(--line); line-height: 1.5;
   }
+  .flag-quote mark{ background: rgba(91,140,255,0.25); color: var(--text); padding: 1px 2px; border-radius: 2px; }
+  .flag-matched{ font-size: 11.5px; color: var(--dim); margin-bottom: 6px; }
+  .flag-matched strong{ color: var(--text); font-weight: 600; }
   .flag-why{ font-size: 13.5px; color: #C3C8CF; line-height: 1.5; }
+
+  .flag-confidence{ font-size: 11px; color: var(--dim-2); margin-top: 8px; }
+  .flag-confidence strong{ color: var(--dim); font-weight: 600; }
+
+  .expand-toggle{
+    background: transparent; box-shadow: none; color: var(--accent); border: none;
+    padding: 0; margin-top: 10px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px;
+  }
+  .expand-toggle:hover{ opacity: 0.75; }
+  .expand-toggle .toggle-chev{ transition: transform 0.2s ease; display: inline-block; }
+  .expand-toggle[aria-expanded="true"] .toggle-chev{ transform: rotate(180deg); }
+
+  .flag-details{
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+    display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #C3C8CF; line-height: 1.55;
+  }
+  .flag-details strong{ color: var(--text); font-weight: 600; }
+  .flag-details[hidden]{ display: none; }
+
+  .flag-actions{ display: flex; gap: 8px; flex-wrap: wrap; }
+
   .empty-flags{ font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; font-size: 13px; color: var(--signal-low); padding: 14px 0; }
 
   .stats-grid{
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
-    background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 36px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 20px;
   }
-  .stat{ background: var(--panel); padding: 16px 18px; }
+  .stat{ background: var(--panel); padding: 16px 14px; }
   .stat-num{ font-family: "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace; font-size: 22px; font-weight: 700; }
-  .stat-label{ font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+  .stat-label{ font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 4px; }
 
   footer{
     margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line);
@@ -347,15 +492,38 @@
   .sig-brand{ font-size: 11px; color: var(--dim); letter-spacing: 0.03em; }
   .sig-slogan{ font-size: 10px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.12em; margin-left: auto; opacity: 0.85; }
 
+  /* Learn More modal */
+  .modal-overlay{
+    position: fixed; inset: 0; background: rgba(5,7,10,0.72); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; z-index: 50; padding: 20px;
+  }
+  .modal-overlay[hidden]{ display: none; }
+  .modal-box{
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px;
+    padding: 26px; max-width: 440px; width: 100%; max-height: 80vh; overflow-y: auto;
+    position: relative; box-shadow: 0 20px 60px -10px rgba(0,0,0,0.6);
+    animation: modalIn 0.18s ease;
+  }
+  @keyframes modalIn{ from{ opacity: 0; transform: translateY(8px) scale(0.98); } to{ opacity: 1; transform: translateY(0) scale(1); } }
+  .modal-close{
+    position: absolute; top: 12px; right: 12px; background: transparent; box-shadow: none;
+    color: var(--dim); border: none; font-size: 18px; padding: 6px 10px; line-height: 1;
+  }
+  .modal-close:hover{ color: var(--text); opacity: 1; }
+  .modal-title{ font-size: 16px; font-weight: 700; margin-bottom: 12px; padding-right: 28px; }
+  .modal-body{ font-size: 13.5px; color: #C3C8CF; line-height: 1.65; }
+
   @media (max-width: 600px){
     .wrap{ padding: 32px 16px 60px; }
     header{ flex-direction: column; gap: 16px; }
     .meta-tag{ text-align: left; }
     .scope-grid{ grid-template-columns: 1fr; }
-    .stats-grid{ grid-template-columns: 1fr; }
+    .stats-grid{ grid-template-columns: repeat(2, 1fr); }
     .score-row{ flex-direction: column; align-items: flex-start; gap: 16px; }
     .signature{ flex-direction: column; align-items: flex-start; gap: 4px; }
     .sig-slogan{ margin-left: 0; }
+    .section-title-row{ flex-wrap: wrap; }
+    .flag-head{ flex-wrap: wrap; }
   }
 
 </style>
@@ -392,11 +560,11 @@
     </div>
     <div class="meta-tag">
       MODE: <span>HEURISTIC SCAN</span><br>
-      v0.2 — pattern-based, no model call
+      v0.3 — pattern-based, no model call
     </div>
   </header>
 
-  <div class="scope-bar" id="scopeBar">
+  <div class="scope-bar" id="scopeBar" role="button" tabindex="0" aria-expanded="false" aria-controls="scopePanel">
     <span class="dot"></span>
     <span>What does Verity actually check? <strong style="color:var(--text);">Tap to see</strong></span>
     <span class="chev">▾</span>
@@ -430,6 +598,17 @@
     <button class="chip" data-sample="clean">Careful AI answer</button>
   </div>
 
+  <div class="prompt-field">
+    <label for="promptInput" class="prompt-label">Original prompt / question <span class="optional-tag">optional — saved for your reference only, never scanned</span></label>
+    <textarea id="promptInput" class="prompt-textarea" placeholder="Paste the question or prompt you tested, if you'd like it kept alongside this result. Only the AI response below is analyzed."></textarea>
+  </div>
+
+  <div class="restore-bar" id="restoreBar">
+    <span>Restore your last scanned text?</span>
+    <button id="restoreBtn" type="button">Restore</button>
+    <button class="restore-dismiss" id="restoreDismiss" type="button">Dismiss</button>
+  </div>
+
   <div class="scan-frame">
     <textarea id="input" placeholder="Paste AI-generated text here — an answer, a summary, a claim, a generated paragraph. Verity scans the writing style for risk patterns, not the facts themselves."></textarea>
     <div class="sweep-line"></div>
@@ -441,6 +620,10 @@
   </div>
 
   <div class="results" id="results">
+    <div class="sr-only" id="srStatus" aria-live="polite"></div>
+
+    <div class="prompt-ref" id="promptRef" style="display:none;"></div>
+
     <div class="score-row">
       <div class="score-dial">
         <svg width="96" height="96" viewBox="0 0 96 96">
@@ -457,13 +640,56 @@
       </div>
     </div>
 
+    <div class="scan-meta" id="scanMeta">
+      <span>Scan ID: <strong id="scanId">—</strong></span>
+      <span>Analyzed in <strong id="scanDuration">—</strong></span>
+      <span>Scan confidence: <strong id="scanConfidence">—</strong></span>
+    </div>
+
+    <div class="section-title">Overall Assessment</div>
+    <div class="overall-card" id="overallCard">
+      <div class="overall-label" id="overallLabel">—</div>
+      <div class="overall-text" id="overallText">—</div>
+    </div>
+
+    <div class="highlight-bar" id="calcBar" role="button" tabindex="0" aria-expanded="false" aria-controls="calcPanel">
+      <span class="dot"></span>
+      <span>How the score was calculated</span>
+      <span class="chev">▾</span>
+    </div>
+    <div class="highlight-box" id="calcPanel">
+      <div class="highlight-text mono" id="calcText"></div>
+    </div>
+
     <div class="stats-grid">
-      <div class="stat"><div class="stat-num" id="statHigh">0</div><div class="stat-label">High-risk flags</div></div>
-      <div class="stat"><div class="stat-num" id="statMid">0</div><div class="stat-label">Caution flags</div></div>
+      <div class="stat"><div class="stat-num" id="statHigh">0</div><div class="stat-label">Critical flags</div></div>
+      <div class="stat"><div class="stat-num" id="statMid">0</div><div class="stat-label">Risky flags</div></div>
+      <div class="stat"><div class="stat-num" id="statLow">0</div><div class="stat-label">Caution flags</div></div>
       <div class="stat"><div class="stat-num" id="statSentences">0</div><div class="stat-label">Sentences scanned</div></div>
     </div>
 
-    <div class="section-title">Findings</div>
+    <div class="highlight-bar" id="highlightBar" role="button" tabindex="0" aria-expanded="false" aria-controls="highlightPanel">
+      <span class="dot"></span>
+      <span>View highlighted source text</span>
+      <span class="chev">▾</span>
+    </div>
+    <div class="highlight-box" id="highlightPanel">
+      <div class="highlight-text mono" id="highlightText"></div>
+      <div class="highlight-legend">
+        <span><i style="background:var(--signal-high);"></i>Critical</span>
+        <span><i style="background:var(--sev-risky);"></i>Risky</span>
+        <span><i style="background:var(--signal-mid);"></i>Caution</span>
+      </div>
+    </div>
+
+    <div class="quick-nav" id="quickNav" style="display:none;">
+      <button id="jumpCriticalBtn" type="button">Jump to first critical flag ↓</button>
+    </div>
+
+    <div class="section-title-row">
+      <div class="section-title">Findings</div>
+      <button class="expand-all-btn" id="expandAllBtn" type="button">Expand all</button>
+    </div>
     <div id="flagsContainer"></div>
   </div>
 
@@ -479,6 +705,14 @@
   </footer>
 </div>
 
+<div class="modal-overlay" id="modalOverlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button class="modal-close" id="modalClose" aria-label="Close">✕</button>
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
 <script>
 const input = document.getElementById('input');
 const charCount = document.getElementById('charCount');
@@ -487,11 +721,38 @@ const results = document.getElementById('results');
 const flagsContainer = document.getElementById('flagsContainer');
 const scopeBar = document.getElementById('scopeBar');
 const scopePanel = document.getElementById('scopePanel');
+const highlightBar = document.getElementById('highlightBar');
+const highlightPanel = document.getElementById('highlightPanel');
+const highlightText = document.getElementById('highlightText');
+const calcBar = document.getElementById('calcBar');
+const calcPanel = document.getElementById('calcPanel');
+const restoreBar = document.getElementById('restoreBar');
+const srStatus = document.getElementById('srStatus');
+const expandAllBtn = document.getElementById('expandAllBtn');
+const quickNav = document.getElementById('quickNav');
+const modalOverlay = document.getElementById('modalOverlay');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+const modalClose = document.getElementById('modalClose');
+const promptInput = document.getElementById('promptInput');
 
-scopeBar.addEventListener('click', () => {
-  scopeBar.classList.toggle('open');
-  scopePanel.classList.toggle('open');
-});
+const LAST_INPUT_KEY = 'verity_last_input';
+const LAST_PROMPT_KEY = 'verity_last_prompt';
+
+function toggleCollapsible(barEl, panelEl) {
+  const isOpen = barEl.classList.toggle('open');
+  panelEl.classList.toggle('open');
+  barEl.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+scopeBar.addEventListener('click', () => toggleCollapsible(scopeBar, scopePanel));
+scopeBar.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); scopeBar.click(); } });
+
+highlightBar.addEventListener('click', () => toggleCollapsible(highlightBar, highlightPanel));
+highlightBar.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); highlightBar.click(); } });
+
+calcBar.addEventListener('click', () => toggleCollapsible(calcBar, calcPanel));
+calcBar.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); calcBar.click(); } });
 
 const SAMPLES = {
   risky: "Studies show that remote teams are always 100% more productive than in-office teams, and this completely eliminates the need for in-person meetings. Experts agree that this trend will definitely continue, causing a permanent shift in how every single company operates by 2027.",
@@ -514,70 +775,332 @@ input.addEventListener('input', () => {
   scanBtn.disabled = input.value.trim().length < 20;
 });
 
+// ---- Restore last scan ----
+(function initRestore(){
+  try {
+    const saved = localStorage.getItem(LAST_INPUT_KEY);
+    if (saved && saved.trim().length >= 20 && input.value.trim().length === 0) {
+      restoreBar.classList.add('visible');
+    }
+  } catch (e) { /* localStorage unavailable — silently skip */ }
+})();
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  try {
+    const saved = localStorage.getItem(LAST_INPUT_KEY);
+    if (saved) {
+      input.value = saved;
+      charCount.textContent = saved.length;
+      scanBtn.disabled = saved.trim().length < 20;
+    }
+    const savedPrompt = localStorage.getItem(LAST_PROMPT_KEY);
+    if (savedPrompt) promptInput.value = savedPrompt;
+  } catch (e) {}
+  restoreBar.classList.remove('visible');
+});
+document.getElementById('restoreDismiss').addEventListener('click', () => {
+  restoreBar.classList.remove('visible');
+});
+
+// ---- Pattern library with full explanation metadata ----
 const PATTERNS = [
-  { type: 'Absolute claim', severity: 'high',
+  { type: 'Absolute claim', severity: 'high', category: 'Misleading framing',
     regex: /\b(always|never|guaranteed|impossible|every single|completely eliminates?|100% (?:accurate|safe|effective|certain)|no doubt|undeniably|proven beyond)\b/gi,
-    why: 'Absolute language rarely survives contact with real-world exceptions. Worth checking whether the source actually supports a claim this strong.' },
-  { type: 'Unsupported statistic', severity: 'high',
+    why: 'Absolute language rarely survives contact with real-world exceptions. Worth checking whether the source actually supports a claim this strong.',
+    impact: 'If treated as literal fact, absolute claims can lead you to ignore valid exceptions or repeat a statement that falls apart the moment a counterexample shows up.',
+    confidence: 'High',
+    learnMore: { title: 'Absolute Claims', body: 'Words like "always," "never," or "100%" rarely hold up against real exceptions. Careful writing tends to hedge ("often," "in most cases") because reality is messy. When you see absolute language, ask: does the source actually support zero exceptions, or is this the model overstating its own confidence?' } },
+  { type: 'Unsupported statistic', severity: 'high', category: 'Hallucination risk',
     regex: /\b\d{1,3}(\.\d+)?%\s+(of|increase|decrease|more|less|improvement|growth|faster|reduction)\b/gi,
-    why: 'A precise number with no cited source attached. Numbers this specific should trace back to a study, dataset, or named source.' },
-  { type: 'Vague authority', severity: 'mid',
+    why: 'A precise number with no cited source attached. Numbers this specific should trace back to a study, dataset, or named source.',
+    impact: 'Precise-sounding numbers are persuasive, but a stat without a named source is unverifiable — repeating it can spread a false impression of rigor.',
+    confidence: 'Medium',
+    learnMore: { title: 'Unsourced Statistics', body: 'AI models can generate plausible-looking numbers that aren\'t tied to any real dataset. A statistic is only as trustworthy as its source — if none is given, treat the number as illustrative rather than factual until you can verify it.' } },
+  { type: 'Vague authority', severity: 'mid', category: 'Hallucination risk',
     regex: /\b(studies show|experts (say|agree|believe)|research (shows|suggests|indicates)|it is widely known|scientists have found)\b/gi,
-    why: 'Attributes a claim to an unnamed authority. Ask: which study, which experts? Unnamed sourcing is a common hallucination pattern.' },
-  { type: 'Overconfident hedge-free claim', severity: 'mid',
+    why: 'Attributes a claim to an unnamed authority. Ask: which study, which experts? Unnamed sourcing is a common hallucination pattern.',
+    impact: 'Citing an unnamed "expert" or "study" borrows credibility without accountability — there is no way to check who actually said it or under what conditions.',
+    confidence: 'High',
+    learnMore: { title: 'Vague Authority', body: 'Phrases like "studies show" or "experts agree" sound authoritative but name no one. This is one of the most common ways generated text creates a false sense of being well-researched. Always ask for the specific source.' } },
+  { type: 'Overconfident hedge-free claim', severity: 'mid', category: 'Misleading framing',
     regex: /\b(will definitely|is certain to|without question|it is certain that|there is no chance)\b/gi,
-    why: 'States a prediction or judgment with certainty language the underlying evidence usually can\'t support.' },
-  { type: 'Date/fact precision risk', severity: 'mid',
+    why: 'States a prediction or judgment with certainty language the underlying evidence usually can\'t support.',
+    impact: 'Certainty language about future events or outcomes can mislead you into treating a prediction as settled fact when it is really a guess dressed up with confidence.',
+    confidence: 'High',
+    learnMore: { title: 'Overconfident Predictions', body: 'Forecasts and judgments framed with total certainty ("will definitely," "without question") almost never have evidence strong enough to back that certainty. Treat these as opinions, not conclusions.' } },
+  { type: 'Date/fact precision risk', severity: 'mid', category: 'Hallucination risk',
     regex: /\bin (19|20)\d{2}[,]? (the|it was|this)\b/gi,
-    why: 'Specific year tied to a specific claim. Model-generated dates are a common source of subtle factual drift — worth a quick cross-check.' },
-  { type: 'Self-contradiction marker', severity: 'high',
+    why: 'Specific year tied to a specific claim. Model-generated dates are a common source of subtle factual drift — worth a quick cross-check.',
+    impact: 'A specific year attached to a specific claim is easy to get subtly wrong. If the date is off, any reasoning built on top of it is affected too.',
+    confidence: 'Low',
+    learnMore: { title: 'Date Precision Risk', body: 'Specific years attached to specific events are a common place where generated text drifts from reality — sometimes by just a year or two. This flag has a higher false-positive rate; use it as a nudge to double-check rather than a strong signal on its own.' } },
+  { type: 'Self-contradiction marker', severity: 'low', category: 'Consistency risk',
     regex: /\b(however|but|on the other hand|that said|contradicts?|in contrast)\b/gi,
-    why: 'Signals a pivot in the argument. Check both sides of the "however" aren\'t quietly contradicting an earlier claim.' },
-  { type: 'Hedge-free causal claim', severity: 'low',
+    why: 'Signals a pivot in the argument. Check both sides of the "however" aren\'t quietly contradicting an earlier claim.',
+    impact: 'This word signals a shift in the argument. It is not automatically a problem, but it is worth confirming the contrast doesn\'t quietly undercut a claim made earlier in the text.',
+    confidence: 'Low',
+    learnMore: { title: 'Self-Contradiction Markers', body: 'Words like "however" or "but" are extremely common and usually harmless — they just signal a shift in the argument. This flag has a high false-positive rate by design and is weighted lightly in the score for that reason. It\'s here as a prompt to re-read the surrounding sentences, not as proof of an actual contradiction.' } },
+  { type: 'Hedge-free causal claim', severity: 'low', category: 'Misleading framing',
     regex: /\b(causes?|leads? to|results? in|because of this)\b/gi,
-    why: 'Causal language is stronger than correlational language. Confirm the source actually establishes cause-and-effect.' }
+    why: 'Causal language is stronger than correlational language. Confirm the source actually establishes cause-and-effect.',
+    impact: 'Causal language implies proof of a direct cause. If the underlying evidence is only correlational, this framing overstates what is actually known.',
+    confidence: 'Medium',
+    learnMore: { title: 'Hedge-Free Causal Claims', body: 'Saying something "causes" or "leads to" an outcome implies a proven mechanism. Most real-world evidence is correlational, not causal. Watch for this gap between the strength of the language and the strength of the underlying evidence.' } },
+  { type: 'Loaded / bias language', severity: 'mid', category: 'Misleading framing',
+    regex: /\b(obviously|clearly|everyone knows|it goes without saying|needless to say)\b/gi,
+    why: 'Presents a claim as self-evident, which can discourage scrutiny of whether it actually needs justification.',
+    impact: 'Loaded language can pressure a reader into accepting a claim without evidence, since disagreeing would feel like missing something "obvious."',
+    confidence: 'Medium',
+    learnMore: { title: 'Loaded / Bias Language', body: 'Words like "obviously" or "everyone knows" frame a claim as beyond question. This can discourage a reader from checking whether the claim actually holds up. When you see this, ask: would this still sound convincing without the "obviously"?' } },
+  { type: 'False binary framing', severity: 'mid', category: 'Misleading framing',
+    regex: /\b(the only way|only solution|no other option|there is no other way)\b/gi,
+    why: 'Presents a situation as having exactly one possible path, which is rarely true and can hide legitimate alternatives.',
+    impact: 'Removing other options from consideration can lead you to accept a solution or explanation without exploring valid alternatives.',
+    confidence: 'Medium',
+    learnMore: { title: 'False Binary Framing', body: 'Phrases like "the only way" or "no other option" flatten a situation into a single choice. Most real situations have multiple valid paths — treat these phrases as a cue to ask "what else could work?"' } }
 ];
+
+const SEVERITY_LABEL = { high: 'Critical', mid: 'Risky', low: 'Caution' };
+
+const ABS_SUGGESTIONS = {
+  'always': 'often', 'never': 'rarely', 'guaranteed': 'likely', 'impossible': 'unlikely',
+  'every single': 'most', 'completely eliminates': 'substantially reduces',
+  'no doubt': "it's likely", 'undeniably': 'the evidence suggests', 'proven beyond': 'strongly supported by'
+};
+
+function buildSuggestion(pattern, matchedRaw) {
+  const matched = matchedRaw.trim();
+  const lower = matched.toLowerCase();
+  switch (pattern.type) {
+    case 'Absolute claim': {
+      for (const key in ABS_SUGGESTIONS) {
+        if (lower.includes(key)) {
+          return `Consider replacing "${matched}" with a hedged alternative like "${ABS_SUGGESTIONS[key]}," unless the source truly supports zero exceptions.`;
+        }
+      }
+      if (/100%/.test(matched)) {
+        return `Replace "${matched}" with a qualified phrase like "highly" or "very," unless an exact figure is confirmed by a named source.`;
+      }
+      return `Soften "${matched}" to hedged language unless the source truly supports zero exceptions.`;
+    }
+    case 'Unsupported statistic':
+      return `Attach a named source for "${matched}" (e.g. "according to [study/organization]"), or soften it to a qualitative statement until the figure is verified.`;
+    case 'Vague authority':
+      return `Replace "${matched}" with a specific citation (author, organization, or study name), or soften to "some evidence suggests" if no source is available.`;
+    case 'Overconfident hedge-free claim':
+      return `Swap "${matched}" for probability language such as "will likely" or "tends to," unless the outcome is truly guaranteed.`;
+    case 'Date/fact precision risk':
+      return `Cross-check the year in "${matched}" against a reliable source before relying on this detail.`;
+    case 'Self-contradiction marker':
+      return `Re-read the sentences around "${matched}" together to confirm the contrast doesn't quietly undercut an earlier claim.`;
+    case 'Hedge-free causal claim':
+      return `Replace "${matched}" with correlational phrasing (e.g. "is associated with") unless a controlled study backs up direct causation.`;
+    case 'Loaded / bias language':
+      return `Remove "${matched}" and state the claim on its own merits — if it still needs justification without the framing word, add the evidence directly.`;
+    case 'False binary framing':
+      return `Replace "${matched}" with language that allows for alternatives, e.g. "one approach is..." unless every other option has genuinely been ruled out.`;
+    default:
+      return 'Verify this statement against a reliable source.';
+  }
+}
+
+function severityWeight(sev){ return sev === 'high' ? 3 : sev === 'mid' ? 1.5 : 0.5; }
 
 function scan(text) {
   const sentences = text.split(/(?<=[.!?])\s+/).filter(s => s.trim().length > 0);
   const flags = [];
   const seen = new Set();
+  const counts = {};
+
+  // First pass: count total occurrences of each pattern+phrase combo across the whole text.
+  PATTERNS.forEach(pattern => {
+    const countRe = new RegExp(pattern.regex.source, pattern.regex.flags);
+    let cMatch;
+    while ((cMatch = countRe.exec(text)) !== null) {
+      const key = pattern.type + cMatch[0].toLowerCase();
+      counts[key] = (counts[key] || 0) + 1;
+      if (cMatch[0].length === 0) countRe.lastIndex++;
+    }
+  });
 
   PATTERNS.forEach(pattern => {
+    const re = new RegExp(pattern.regex.source, pattern.regex.flags);
     let match;
-    const re = new RegExp(pattern.regex);
     while ((match = re.exec(text)) !== null) {
       const idx = match.index;
       const snippetStart = Math.max(0, idx - 40);
       const snippetEnd = Math.min(text.length, idx + match[0].length + 40);
       let snippet = text.slice(snippetStart, snippetEnd).trim();
-      if (snippetStart > 0) snippet = '…' + snippet;
-      if (snippetEnd < text.length) snippet = snippet + '…';
+      const relStart = idx - snippetStart;
+      const relEnd = relStart + match[0].length;
+      let prefix = snippetStart > 0 ? '…' : '';
+      let suffix = snippetEnd < text.length ? '…' : '';
 
       const key = pattern.type + match[0].toLowerCase();
-      if (seen.has(key)) continue;
+      if (seen.has(key)) { if (match[0].length === 0) re.lastIndex++; continue; }
       seen.add(key);
 
-      flags.push({ type: pattern.type, severity: pattern.severity, snippet, why: pattern.why });
-      if (!pattern.regex.global) break;
+      flags.push({
+        type: pattern.type,
+        category: pattern.category,
+        severity: pattern.severity,
+        severityLabel: SEVERITY_LABEL[pattern.severity],
+        snippet, prefix, suffix, relStart, relEnd,
+        why: pattern.why,
+        impact: pattern.impact,
+        confidence: pattern.confidence,
+        learnMore: pattern.learnMore,
+        suggestion: buildSuggestion(pattern, match[0]),
+        matched: match[0],
+        count: counts[key] || 1,
+        start: idx, end: idx + match[0].length
+      });
+      if (match[0].length === 0) re.lastIndex++;
     }
   });
 
   return { sentences, flags };
 }
 
-function severityWeight(sev){ return sev === 'high' ? 3 : sev === 'mid' ? 1.5 : 0.5; }
+function collectHighlightRanges(text) {
+  const sevRank = { high: 3, mid: 2, low: 1 };
+  let ranges = [];
+  PATTERNS.forEach(pattern => {
+    const re = new RegExp(pattern.regex.source, pattern.regex.flags);
+    let m;
+    while ((m = re.exec(text)) !== null) {
+      ranges.push({ start: m.index, end: m.index + m[0].length, severity: pattern.severity });
+      if (m[0].length === 0) re.lastIndex++;
+    }
+  });
+  ranges.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  const merged = [];
+  ranges.forEach(r => {
+    const last = merged[merged.length - 1];
+    if (last && r.start < last.end) {
+      if (sevRank[r.severity] > sevRank[last.severity]) merged[merged.length - 1] = r;
+      return;
+    }
+    merged.push(r);
+  });
+  return merged;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildHighlightedHTML(text, ranges) {
+  let html = '';
+  let cursor = 0;
+  ranges.forEach(r => {
+    html += escapeHtml(text.slice(cursor, r.start));
+    html += `<mark class="hl-${r.severity}">${escapeHtml(text.slice(r.start, r.end))}</mark>`;
+    cursor = r.end;
+  });
+  html += escapeHtml(text.slice(cursor));
+  return html;
+}
+
+function buildOverallSummary(score, high, mid, low) {
+  const total = high + mid + low;
+  if (total === 0) {
+    return { label: 'Safe — no risky phrasing detected', text: 'No risky phrasing patterns were found. The writing style reads carefully — but remember, this only checks tone, not truth. Verify any specific facts before relying on them.', color: '#4FD1A5' };
+  }
+  if (score >= 75) {
+    return { label: 'Generally reliable style', text: `Despite ${total} flagged pattern(s), the overall phrasing mostly reads as careful. Treat the flagged spots below as the priority items to verify — the rest of the text shows fewer risk signals.`, color: '#4FD1A5' };
+  }
+  if (score >= 45) {
+    return { label: 'Mixed reliability — verify before trusting', text: `This text mixes careful phrasing with ${high} critical and ${mid} risky pattern(s). Verify the flagged claims individually before treating the answer as a whole as trustworthy.`, color: '#E8B84B' };
+  }
+  return { label: 'Low reliability signal', text: `With ${high} critical and ${mid} risky pattern(s) detected, this text shows strong overconfidence signals throughout. Treat it as a draft that needs heavy fact-checking, not a finished answer.`, color: '#E8553D' };
+}
+
+function generateScanId() {
+  const stamp = Date.now().toString(36).toUpperCase();
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `VRTY-${stamp}-${rand}`;
+}
+
+const CONFIDENCE_RANK = { Low: 1, Medium: 2, High: 3 };
+
+function computeScanConfidence(text, flags) {
+  const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+  let lengthTier, lengthNote;
+  if (wordCount < 30) { lengthTier = 1; lengthNote = 'a short sample — fewer patterns to cross-check'; }
+  else if (wordCount < 120) { lengthTier = 2; lengthNote = 'a moderate sample size'; }
+  else { lengthTier = 3; lengthNote = 'ample length for reliable pattern detection'; }
+
+  let patternTier = 3;
+  if (flags.length > 0) {
+    const avg = flags.reduce((sum, f) => sum + (CONFIDENCE_RANK[f.confidence] || 2), 0) / flags.length;
+    patternTier = avg;
+  }
+
+  const combined = (lengthTier + patternTier) / 2;
+  let label;
+  if (combined >= 2.5) label = 'High';
+  else if (combined >= 1.75) label = 'Medium';
+  else label = 'Low';
+
+  const explanation = `${wordCount} word(s) scanned (${lengthNote}); average per-flag detection confidence ${patternTier.toFixed(1)}/3.`;
+  return { label, explanation, wordCount };
+}
+
+function buildScoreBreakdown(high, mid, low, score) {
+  const critPts = high * 27;
+  const riskyPts = mid * 13.5;
+  const cautionPts = low * 4.5;
+  const totalDeducted = critPts + riskyPts + cautionPts;
+  const raw = 100 - totalDeducted;
+  const lines = [
+    'Score starts at 100 points.',
+    'Each flag subtracts points based on severity: Critical −27 pts, Risky −13.5 pts, Caution −4.5 pts.',
+    '',
+    `This scan: ${high} critical × 27 = ${critPts.toFixed(1)} pts`,
+    `           ${mid} risky × 13.5 = ${riskyPts.toFixed(1)} pts`,
+    `           ${low} caution × 4.5 = ${cautionPts.toFixed(1)} pts`,
+    `           Total deducted: ${totalDeducted.toFixed(1)} pts`,
+    '',
+    `Raw score: 100 − ${totalDeducted.toFixed(1)} = ${raw.toFixed(1)}`,
+    `Clamped to the 8–100 range and rounded → final score: ${score}/100`
+  ];
+  return lines.join('\n');
+}
 
 function render(text) {
+  const scanStartTime = performance.now();
+  try { localStorage.setItem(LAST_INPUT_KEY, text); } catch (e) {}
+  restoreBar.classList.remove('visible');
+
+  // Optional prompt/question reference — displayed only, never scanned or analyzed.
+  const promptRefEl = document.getElementById('promptRef');
+  const promptText = promptInput.value.trim();
+  if (promptText) {
+    try { localStorage.setItem(LAST_PROMPT_KEY, promptText); } catch (e) {}
+    const shown = promptText.length > 220 ? promptText.slice(0, 220) + '…' : promptText;
+    promptRefEl.innerHTML = '';
+    const strong = document.createElement('strong');
+    strong.textContent = 'Prompt tested (reference only, not scanned): ';
+    promptRefEl.appendChild(strong);
+    promptRefEl.appendChild(document.createTextNode(shown));
+    promptRefEl.style.display = 'block';
+  } else {
+    promptRefEl.style.display = 'none';
+    promptRefEl.textContent = '';
+  }
+
   const { sentences, flags } = scan(text);
   const high = flags.filter(f => f.severity === 'high').length;
   const mid = flags.filter(f => f.severity === 'mid').length;
+  const low = flags.filter(f => f.severity === 'low').length;
 
   const penalty = flags.reduce((sum, f) => sum + severityWeight(f.severity), 0);
   const score = Math.round(Math.min(100, Math.max(8, 100 - penalty * 9)));
 
   document.getElementById('statHigh').textContent = high;
   document.getElementById('statMid').textContent = mid;
+  document.getElementById('statLow').textContent = low;
   document.getElementById('statSentences').textContent = sentences.length;
 
   const scoreNum = document.getElementById('scoreNum');
@@ -607,45 +1130,141 @@ function render(text) {
   scoreLabel.style.color = color;
   scoreSub.textContent = sub;
 
-  window._verityLastResult = { score, label, high, mid, sentences: sentences.length, flags };
+  const overall = buildOverallSummary(score, high, mid, low);
+  const overallCard = document.getElementById('overallCard');
+  document.getElementById('overallLabel').textContent = overall.label;
+  document.getElementById('overallLabel').style.color = overall.color;
+  document.getElementById('overallText').textContent = overall.text;
+  overallCard.style.borderLeftColor = overall.color;
+
+  const scanId = generateScanId();
+  const scanConfidenceResult = computeScanConfidence(text, flags);
+  document.getElementById('scanId').textContent = scanId;
+  document.getElementById('scanConfidence').textContent = scanConfidenceResult.label;
+  document.getElementById('scanConfidence').title = scanConfidenceResult.explanation;
+  document.getElementById('calcText').textContent = buildScoreBreakdown(high, mid, low, score);
+
+  const ranges = collectHighlightRanges(text);
+  highlightText.innerHTML = buildHighlightedHTML(text, ranges);
+
+  window._verityLastResult = { score, label, high, mid, low, sentences: sentences.length, flags, overall, scanId, scanConfidence: scanConfidenceResult, promptText, durationMs: null };
+
+  srStatus.textContent = `Scan complete. Score ${score} out of 100 — ${label}. ${high} critical, ${mid} risky, ${low} caution flags found across ${sentences.length} sentences.`;
 
   flagsContainer.innerHTML = '';
+  quickNav.style.display = high > 0 ? 'block' : 'none';
+  expandAllBtn.textContent = 'Expand all';
+  expandAllBtn.dataset.state = 'collapsed';
+
   if (flags.length === 0) {
     flagsContainer.innerHTML = `
       <div class="empty-flags">
-        ✓ No risky phrasing patterns found. Remember: this checks tone and style, not facts.
+        ✓ Safe — no risky phrasing patterns found. Remember: this checks tone and style, not facts.
         <button class="mini-copy" data-copy-clean="1">Copy this result</button>
       </div>`;
     const cleanBtn = flagsContainer.querySelector('[data-copy-clean]');
     cleanBtn.addEventListener('click', (e) => {
-      const text = `VERITY: No risky phrasing patterns found in this text (style check only, not a fact-check). — mrjayvirtual.github.io/Verity`;
-      copyToClipboard(text, e.target, 'Copied ✓');
+      const t = `VERITY: No risky phrasing patterns found in this text (style check only, not a fact-check). — mrjayvirtual.github.io/Verity`;
+      copyToClipboard(t, e.target, 'Copied ✓');
     });
   } else {
     flags.forEach((f, i) => {
       const el = document.createElement('div');
       el.className = 'flag ' + f.severity;
+
+      const highlightedSnippet = escapeHtml(f.prefix + f.snippet.slice(0, f.relStart)) +
+        '<mark>' + escapeHtml(f.snippet.slice(f.relStart, f.relEnd)) + '</mark>' +
+        escapeHtml(f.snippet.slice(f.relEnd) + f.suffix);
+
       el.innerHTML = `
-        <div class="flag-head"><span class="flag-type">${f.type}</span><span class="flag-severity">${f.severity}</span></div>
-        <div class="flag-quote mono">${f.snippet.replace(/</g, '&lt;')}</div>
-        <div class="flag-why">${f.why}</div>
-        <button class="mini-copy" data-flag-index="${i}">Copy this flag</button>
+        <div class="flag-head">
+          <div class="flag-head-left">
+            <span class="sev-dot ${f.severity}"></span>
+            <span class="flag-type">${escapeHtml(f.type)}</span>
+            ${f.count > 1 ? `<span class="occurrence-badge">×${f.count} in text</span>` : ''}
+          </div>
+          <span class="flag-severity-badge ${f.severity}">${escapeHtml(f.severityLabel)}</span>
+        </div>
+        <div class="flag-quote mono">${highlightedSnippet}</div>
+        <div class="flag-matched">Matched phrase: <strong>"${escapeHtml(f.matched.trim())}"</strong></div>
+        <div class="flag-why">${escapeHtml(f.why)}</div>
+        <div class="flag-confidence">Confidence this is a real issue: <strong>${escapeHtml(f.confidence)}</strong></div>
+        <span class="category-tag">${escapeHtml(f.category || 'General')}</span>
+        <button class="expand-toggle" data-index="${i}" aria-expanded="false" aria-controls="details-${i}">
+          <span class="toggle-label">Show details</span><span class="toggle-chev">▾</span>
+        </button>
+        <div class="flag-details" id="details-${i}" hidden>
+          <div><strong>Why it matters:</strong> ${escapeHtml(f.impact)}</div>
+          <div><strong>Suggested improvement:</strong> ${escapeHtml(f.suggestion)}</div>
+        </div>
+        <div class="flag-actions">
+          <button class="mini-copy" data-flag-index="${i}">Copy explanation</button>
+          <button class="mini-learn" data-learn-index="${i}">Learn more</button>
+        </div>
       `;
       flagsContainer.appendChild(el);
 
+      const toggleBtn = el.querySelector('.expand-toggle');
+      const detailsEl = el.querySelector('.flag-details');
+      toggleBtn.addEventListener('click', () => {
+        const isHidden = detailsEl.hasAttribute('hidden');
+        if (isHidden) { detailsEl.removeAttribute('hidden'); toggleBtn.setAttribute('aria-expanded', 'true'); toggleBtn.querySelector('.toggle-label').textContent = 'Hide details'; }
+        else { detailsEl.setAttribute('hidden', ''); toggleBtn.setAttribute('aria-expanded', 'false'); toggleBtn.querySelector('.toggle-label').textContent = 'Show details'; }
+      });
+
       const miniBtn = el.querySelector('.mini-copy');
       miniBtn.addEventListener('click', (e) => {
-        const text = `VERITY FLAG [${f.severity.toUpperCase()}]: ${f.type}\n"${f.snippet}"\n→ ${f.why}\n— mrjayvirtual.github.io/Verity`;
-        copyToClipboard(text, e.target, 'Copied ✓');
+        const t = `VERITY FLAG [${f.severityLabel.toUpperCase()}]: ${f.type}${f.count > 1 ? ` (×${f.count} in text)` : ''}\nCategory: ${f.category || 'General'}\nMatched phrase: "${f.matched.trim()}"\nContext: "${f.snippet}"\nConfidence: ${f.confidence}\nWhy flagged: ${f.why}\nWhy it matters: ${f.impact}\nSuggested improvement: ${f.suggestion}\n— mrjayvirtual.github.io/Verity`;
+        copyToClipboard(t, e.target, 'Copied ✓');
+      });
+
+      const learnBtn = el.querySelector('.mini-learn');
+      learnBtn.addEventListener('click', () => {
+        openModal(f.learnMore.title, f.learnMore.body);
       });
 
       setTimeout(() => { el.classList.add('beam-in'); }, 120 + i * 180);
     });
   }
 
+  const durationMs = Math.max(1, Math.round(performance.now() - scanStartTime));
+  document.getElementById('scanDuration').textContent = durationMs + ' ms';
+  if (window._verityLastResult) window._verityLastResult.durationMs = durationMs;
+
   results.classList.add('visible');
 }
 
+expandAllBtn.addEventListener('click', () => {
+  const expanding = expandAllBtn.dataset.state !== 'expanded';
+  document.querySelectorAll('.flag-details').forEach(d => {
+    if (expanding) d.removeAttribute('hidden'); else d.setAttribute('hidden', '');
+  });
+  document.querySelectorAll('.expand-toggle').forEach(btn => {
+    btn.setAttribute('aria-expanded', expanding ? 'true' : 'false');
+    btn.querySelector('.toggle-label').textContent = expanding ? 'Hide details' : 'Show details';
+  });
+  expandAllBtn.dataset.state = expanding ? 'expanded' : 'collapsed';
+  expandAllBtn.textContent = expanding ? 'Collapse all' : 'Expand all';
+});
+
+document.getElementById('jumpCriticalBtn').addEventListener('click', () => {
+  const firstCritical = document.querySelector('.flag.high');
+  if (firstCritical) firstCritical.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+// ---- Learn More modal ----
+function openModal(title, body) {
+  modalTitle.textContent = title;
+  modalBody.textContent = body;
+  modalOverlay.hidden = false;
+  modalClose.focus();
+}
+function closeModal() { modalOverlay.hidden = true; }
+modalClose.addEventListener('click', closeModal);
+modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modalOverlay.hidden) closeModal(); });
+
+// ---- Clipboard helpers ----
 function copyToClipboard(text, btnEl, successText) {
   function showSuccess() {
     const original = btnEl.dataset.originalText || btnEl.textContent;
@@ -691,18 +1310,25 @@ document.getElementById('copyBtn').addEventListener('click', (e) => {
   if (!r) return;
 
   let summary = `VERITY SCAN RESULT\n`;
+  summary += `Scan ID: ${r.scanId}\n`;
+  if (r.promptText) summary += `Prompt tested (reference only): ${r.promptText.length > 200 ? r.promptText.slice(0, 200) + '…' : r.promptText}\n`;
   summary += `Score: ${r.score}/100 — ${r.label}\n`;
-  summary += `Flags: ${r.high} high-risk, ${r.mid} caution, across ${r.sentences} sentence(s)\n`;
+  summary += `Overall: ${r.overall.label}\n`;
+  summary += `Scan confidence: ${r.scanConfidence.label} (${r.scanConfidence.explanation})\n`;
+  if (r.durationMs) summary += `Analyzed in ${r.durationMs} ms\n`;
+  summary += `Flags: ${r.high} critical, ${r.mid} risky, ${r.low} caution, across ${r.sentences} sentence(s)\n`;
 
   if (r.flags && r.flags.length > 0) {
     summary += `\nFindings:\n`;
     r.flags.forEach((f, i) => {
-      summary += `${i + 1}. [${f.severity.toUpperCase()}] ${f.type} — ${f.why}\n`;
+      summary += `${i + 1}. [${f.severityLabel.toUpperCase()} · confidence ${f.confidence}${f.count > 1 ? ` · ×${f.count} in text` : ''}] ${f.type} (${f.category || 'General'})\n   Matched: "${f.matched.trim()}"\n   Context: "${f.snippet}"\n   Why it matters: ${f.impact}\n   Suggested improvement: ${f.suggestion}\n`;
     });
   } else {
     summary += `\nNo risky phrasing patterns found.\n`;
   }
 
+  summary += `\n${r.overall.text}\n`;
+  summary += `\nHow the score was calculated:\n${buildScoreBreakdown(r.high, r.mid, r.low, r.score)}\n`;
   summary += `\nNote: style-pattern check only, not a fact verification.\n`;
   summary += `Scanned with Verity — mrjayvirtual.github.io/Verity`;
 
